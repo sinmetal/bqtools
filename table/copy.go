@@ -48,7 +48,7 @@ func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDa
 
 		js, err := s.process(jobInsertProjectID, tl, dstDataset)
 		if err != nil {
-
+			return nil, err
 		}
 		jobIDs = append(jobIDs, js...)
 
