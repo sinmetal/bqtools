@@ -23,13 +23,15 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		}
 		tltl = append(tltl, tl.Tables...)
 
-		fmt.Printf("TotalItems:%d, NextPageToken:%s\n", len(tl.Tables), tl.NextPageToken)
-		if tl.NextPageToken == "" {
+		fmt.Printf("TotalItems:%d, NextPageToken:%+v\n", len(tl.Tables), tl.NextPageToken)
+		fmt.Printf("TokenLength=%d\n", len(tl.NextPageToken))
+		if len(tl.NextPageToken) < 1 || tl.NextPageToken == "" {
 			break
 		}
 		nextPageToken = tl.NextPageToken
 	}
 
+	fmt.Println("Start Diff...")
 	for _, tl := range tltl {
 		t1, err := s.getTable(tl.TableReference.ProjectId, tl.TableReference.DatasetId, tl.TableReference.TableId)
 		if err != nil {

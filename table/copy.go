@@ -110,6 +110,9 @@ func (s *TableService) copy(jobInsertProjectID string, srcDataset Dataset, dstDa
 			},
 		},
 	}).Do()
+	if err != nil {
+		return "", err
+	}
 
 	return job.JobReference.JobId, err
 }
