@@ -31,7 +31,9 @@ type Dataset struct {
 	DatasetID string
 }
 
-func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset) ([]string, error) {
+// Copy is srcDatasetからdstDatasetにTableをコピーする
+// start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
+func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, start, end int) ([]string, error) {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	jobIDs := []string{}
@@ -65,6 +67,7 @@ func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDa
 func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset) ([]string, error) {
 	jobIDs := []string{}
 	for _, t := range tl.Tables {
+		// TODO ここにいれる
 		fmt.Println(t.TableReference.TableId)
 
 		jobID, err := s.copy(jobInsertProjectID, Dataset{t.TableReference.ProjectId, t.TableReference.DatasetId}, dstDataset, t.TableReference.TableId)
