@@ -48,6 +48,7 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		if td.T1NumRows != 0 || td.T2NumRows != 0 || len(td.SchemaDiff) > 0 {
 			fmt.Printf("%+v\n", td)
 			wc = 0
+			fmt.Print("Working")
 		}
 		wc++
 		if wc > 10 {
