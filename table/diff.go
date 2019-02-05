@@ -31,7 +31,8 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		nextPageToken = tl.NextPageToken
 	}
 
-	fmt.Println("Start Diff...")
+	fmt.Print("Start Diff")
+	wc := 0 // working log count
 	for _, tl := range tltl {
 		t1, err := s.getTable(tl.TableReference.ProjectId, tl.TableReference.DatasetId, tl.TableReference.TableId)
 		if err != nil {
@@ -46,6 +47,12 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		td := s.diff(t1, t2)
 		if td.T1NumRows != 0 || td.T2NumRows != 0 || len(td.SchemaDiff) > 0 {
 			fmt.Printf("%+v\n", td)
+			wc = 0
+		}
+		wc++
+		if wc > 10 {
+			fmt.Print(".")
+			wc = 0
 		}
 	}
 
