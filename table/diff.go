@@ -24,15 +24,13 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		tltl = append(tltl, tl.Tables...)
 
 		fmt.Printf("TotalItems:%d, NextPageToken:%+v\n", len(tl.Tables), tl.NextPageToken)
-		fmt.Printf("TokenLength=%d\n", len(tl.NextPageToken))
-		if len(tl.NextPageToken) < 1 || tl.NextPageToken == "" {
+		if len(tl.NextPageToken) < 1 {
 			break
 		}
 		nextPageToken = tl.NextPageToken
 	}
 
 	fmt.Print("Start Diff")
-	wc := 0 // working log count
 	for _, tl := range tltl {
 		t1, err := s.getTable(tl.TableReference.ProjectId, tl.TableReference.DatasetId, tl.TableReference.TableId)
 		if err != nil {
@@ -47,14 +45,9 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		td := s.diff(t1, t2)
 		if td.T1NumRows != 0 || td.T2NumRows != 0 || len(td.SchemaDiff) > 0 {
 			fmt.Printf("%+v\n", td)
-			wc = 0
-			fmt.Print("Working")
+			continue
 		}
-		wc++
-		if wc > 10 {
-			fmt.Print(".")
-			wc = 0
-		}
+		fmt.Printf("%s is no diff\n", t1.TableReference.TableId)
 	}
 
 	return nil
