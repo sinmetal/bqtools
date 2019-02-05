@@ -33,7 +33,7 @@ type Dataset struct {
 
 // Copy is srcDatasetからdstDatasetにTableをコピーする
 // start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
-func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, start, end int) ([]string, error) {
+func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, start, end string) ([]string, error) {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	jobIDs := []string{}
@@ -48,7 +48,7 @@ func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDa
 			return nil, err
 		}
 
-		js, err := s.process(jobInsertProjectID, tl, dstDataset)
+		js, err := s.process(jobInsertProjectID, tl, dstDataset, start, end)
 		if err != nil {
 			return nil, err
 		}
@@ -64,10 +64,18 @@ func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDa
 	return jobIDs, nil
 }
 
-func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset) ([]string, error) {
+func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, start string, end string) ([]string, error) {
 	jobIDs := []string{}
 	for _, t := range tl.Tables {
-		// TODO ここにいれる
+		isDate, err := IsYYYYMMDD(t.TableReference.TableId, start, end)
+		if err != nil {
+			fmt.Printf("%s is Failed in range specification of %s-%s\n", t.TableReference.TableId, start, end)
+			continue
+		}
+		if !isDate {
+			fmt.Printf("%s isSince it is not in the range of %s-%s\n", t.TableReference.TableId, start, end)
+			continue
+		}
 		fmt.Println(t.TableReference.TableId)
 
 		jobID, err := s.copy(jobInsertProjectID, Dataset{t.TableReference.ProjectId, t.TableReference.DatasetId}, dstDataset, t.TableReference.TableId)
