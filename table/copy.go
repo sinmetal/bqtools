@@ -3,6 +3,9 @@ package table
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"strings"
+	"time"
 
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/bigquery/v2"
@@ -85,34 +88,43 @@ func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList
 		}
 		fmt.Println(jobID)
 		jobIDs = append(jobIDs, jobID)
+		time.Sleep(80*time.Millisecond + time.Duration(rand.Intn(100))*time.Millisecond)
 	}
 
 	return jobIDs, nil
 }
 
-func (s *TableService) copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, tableID string) (string, error) {
-	job, err := s.bq.Jobs.Insert(jobInsertProjectID, &bigquery.Job{
-		Configuration: &bigquery.JobConfiguration{
-			Copy: &bigquery.JobConfigurationTableCopy{
+func (s *TableService) copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, tableID string) (jobID string, rerr error) {
+	for i := 0; i < 3; i++ {
+		job, err := s.bq.Jobs.Insert(jobInsertProjectID, &bigquery.Job{
+			Configuration: &bigquery.JobConfiguration{
+				Copy: &bigquery.JobConfigurationTableCopy{
 
-				CreateDisposition: "CreateIfNeeded",
-				WriteDisposition:  "WRITE_TRUNCATE",
-				SourceTable: &bigquery.TableReference{
-					ProjectId: srcDataset.Project,
-					DatasetId: srcDataset.DatasetID,
-					TableId:   tableID,
-				},
-				DestinationTable: &bigquery.TableReference{
-					ProjectId: dstDataset.Project,
-					DatasetId: dstDataset.DatasetID,
-					TableId:   tableID,
+					CreateDisposition: "CreateIfNeeded",
+					WriteDisposition:  "WRITE_TRUNCATE",
+					SourceTable: &bigquery.TableReference{
+						ProjectId: srcDataset.Project,
+						DatasetId: srcDataset.DatasetID,
+						TableId:   tableID,
+					},
+					DestinationTable: &bigquery.TableReference{
+						ProjectId: dstDataset.Project,
+						DatasetId: dstDataset.DatasetID,
+						TableId:   tableID,
+					},
 				},
 			},
-		},
-	}).Do()
-	if err != nil {
-		return "", err
+		}).Do()
+		if err != nil {
+			if strings.Contains(err.Error(), "CREATEIFNEEDED is not a valid") {
+				fmt.Printf("retry %s:%s\n", srcDataset, tableID)
+				rerr = err
+				continue
+			}
+			return "", err
+		}
+		return job.JobReference.JobId, nil
 	}
 
-	return job.JobReference.JobId, err
+	return
 }
