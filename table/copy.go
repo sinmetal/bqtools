@@ -36,7 +36,7 @@ type Dataset struct {
 
 // Copy is srcDatasetからdstDatasetにTableをコピーする
 // start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
-func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, start, end string) ([]string, error) {
+func (s *TableService) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, start, end string) ([]string, error) {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	jobIDs := []string{}
@@ -81,7 +81,7 @@ func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList
 		}
 		fmt.Println(t.TableReference.TableId)
 
-		jobID, err := s.copy(jobInsertProjectID, Dataset{t.TableReference.ProjectId, t.TableReference.DatasetId}, dstDataset, t.TableReference.TableId)
+		jobID, err := s.Copy(jobInsertProjectID, Dataset{t.TableReference.ProjectId, t.TableReference.DatasetId}, dstDataset, t.TableReference.TableId)
 		if err != nil {
 			fmt.Printf("%s : failed : %s\n", t.TableReference.TableId, err.Error())
 			continue
@@ -94,14 +94,13 @@ func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList
 	return jobIDs, nil
 }
 
-func (s *TableService) copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, tableID string) (jobID string, rerr error) {
+func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, tableID string) (jobID string, rerr error) {
 	for i := 0; i < 3; i++ {
 		job, err := s.bq.Jobs.Insert(jobInsertProjectID, &bigquery.Job{
 			Configuration: &bigquery.JobConfiguration{
 				Copy: &bigquery.JobConfigurationTableCopy{
 
-					CreateDisposition: "CreateIfNeeded",
-					WriteDisposition:  "WRITE_TRUNCATE",
+					WriteDisposition: "WRITE_TRUNCATE",
 					SourceTable: &bigquery.TableReference{
 						ProjectId: srcDataset.Project,
 						DatasetId: srcDataset.DatasetID,
@@ -116,9 +115,11 @@ func (s *TableService) copy(jobInsertProjectID string, srcDataset Dataset, dstDa
 			},
 		}).Do()
 		if err != nil {
-			if strings.Contains(err.Error(), "CREATEIFNEEDED is not a valid") {
+			fmt.Printf("failed Table Copy : err = %+v", err)
+			if strings.Contains(err.Error(), "CREATEIFNEEDED") {
 				fmt.Printf("retry %s:%s\n", srcDataset, tableID)
 				rerr = err
+				time.Sleep(time.Duration(300)*time.Millisecond + time.Duration(500)*time.Duration(i)*time.Millisecond)
 				continue
 			}
 			return "", err
