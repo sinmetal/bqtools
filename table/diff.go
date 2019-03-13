@@ -23,7 +23,7 @@ func (s *Service) DiffAll(baseDataset Dataset, targetDataset Dataset, search Sea
 			return failure.Wrap(err)
 		}
 		for _, t := range tl.Tables {
-			ok, err := search.Is(t.TableReference.TableId)
+			ok, err := search.Check(t.TableReference.TableId)
 			if err != nil {
 				return failure.Wrap(err)
 			}

@@ -14,10 +14,13 @@ type SearchOption struct {
 	End         string // YYYYMMDD
 }
 
-func (o *SearchOption) Is(tableName string) (bool, error) {
-	if !strings.HasPrefix(tableName, o.TablePrefix) {
-		return false, nil
+func (o *SearchOption) Check(tableName string) (bool, error) {
+	if len(o.TablePrefix) > 0 {
+		if !strings.HasPrefix(tableName, o.TablePrefix) {
+			return false, nil
+		}
 	}
+
 	b, err := IsYYYYMMDD(tableName, o.Start, o.End)
 	if err != nil {
 		return false, failure.Wrap(err)

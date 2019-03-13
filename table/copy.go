@@ -46,7 +46,7 @@ func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstData
 func (s *Service) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, search SearchOption) ([]string, error) {
 	jobIDs := []string{}
 	for _, t := range tl.Tables {
-		ok, err := search.Is(t.TableReference.TableId)
+		ok, err := search.Check(t.TableReference.TableId)
 		if err != nil {
 			return nil, failure.Wrap(err)
 		}
