@@ -8,7 +8,7 @@ import (
 	"google.golang.org/api/bigquery/v2"
 )
 
-func (s *Service) DiffAll(baseDataset Dataset, targetDataset Dataset, search SearchOption) error {
+func (s *Service) DiffAll(baseDataset Dataset, targetDataset Dataset, search *SearchOption) error {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	var tltl []*bigquery.TableListTables
@@ -23,12 +23,14 @@ func (s *Service) DiffAll(baseDataset Dataset, targetDataset Dataset, search Sea
 			return failure.Wrap(err)
 		}
 		for _, t := range tl.Tables {
-			ok, err := search.Check(t.TableReference.TableId)
-			if err != nil {
-				return failure.Wrap(err)
-			}
-			if !ok {
-				continue
+			if search != nil {
+				ok, err := search.Check(t.TableReference.TableId)
+				if err != nil {
+					return failure.Wrap(err)
+				}
+				if !ok {
+					continue
+				}
 			}
 			tltl = append(tltl, t)
 		}

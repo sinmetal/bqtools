@@ -12,7 +12,7 @@ import (
 
 // Copy is srcDatasetからdstDatasetにTableをコピーする
 // start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
-func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, search SearchOption) ([]string, error) {
+func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, search *SearchOption) ([]string, error) {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	jobIDs := []string{}
@@ -43,16 +43,19 @@ func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstData
 	return jobIDs, nil
 }
 
-func (s *Service) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, search SearchOption) ([]string, error) {
+func (s *Service) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, search *SearchOption) ([]string, error) {
 	jobIDs := []string{}
 	for _, t := range tl.Tables {
-		ok, err := search.Check(t.TableReference.TableId)
-		if err != nil {
-			return nil, failure.Wrap(err)
+		if search != nil {
+			ok, err := search.Check(t.TableReference.TableId)
+			if err != nil {
+				return nil, failure.Wrap(err)
+			}
+			if !ok {
+				continue
+			}
 		}
-		if !ok {
-			continue
-		}
+
 		fmt.Println(t.TableReference.TableId)
 
 		jobID, err := s.Copy(jobInsertProjectID, Dataset{t.TableReference.ProjectId, t.TableReference.DatasetId}, dstDataset, t.TableReference.TableId)
