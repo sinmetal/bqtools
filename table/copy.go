@@ -1,42 +1,18 @@
 package table
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
-	"golang.org/x/oauth2/google"
+	"github.com/morikuni/failure"
 	"google.golang.org/api/bigquery/v2"
 )
 
-type TableService struct {
-	bq *bigquery.Service
-}
-
-func NewTableService(ctx context.Context) (*TableService, error) {
-	client, err := google.DefaultClient(ctx, bigquery.BigqueryScope)
-	if err != nil {
-		return nil, err
-	}
-	bq, err := bigquery.New(client)
-	if err != nil {
-		return nil, err
-	}
-	return &TableService{
-		bq: bq,
-	}, nil
-}
-
-type Dataset struct {
-	Project   string
-	DatasetID string
-}
-
 // Copy is srcDatasetからdstDatasetにTableをコピーする
 // start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
-func (s *TableService) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, start, end string) ([]string, error) {
+func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, search SearchOption) ([]string, error) {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	jobIDs := []string{}
@@ -51,7 +27,7 @@ func (s *TableService) CopyAll(jobInsertProjectID string, srcDataset Dataset, ds
 			return nil, err
 		}
 
-		js, err := s.process(jobInsertProjectID, tl, dstDataset, start, end)
+		js, err := s.process(jobInsertProjectID, tl, dstDataset, search)
 		if err != nil {
 			return nil, err
 		}
@@ -67,16 +43,14 @@ func (s *TableService) CopyAll(jobInsertProjectID string, srcDataset Dataset, ds
 	return jobIDs, nil
 }
 
-func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, start string, end string) ([]string, error) {
+func (s *Service) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, search SearchOption) ([]string, error) {
 	jobIDs := []string{}
 	for _, t := range tl.Tables {
-		isDate, err := IsYYYYMMDD(t.TableReference.TableId, start, end)
+		ok, err := search.Is(t.TableReference.TableId)
 		if err != nil {
-			fmt.Printf("%s is Failed in range specification of %s-%s\n", t.TableReference.TableId, start, end)
-			continue
+			return nil, failure.Wrap(err)
 		}
-		if !isDate {
-			fmt.Printf("%s isSince it is not in the range of %s-%s\n", t.TableReference.TableId, start, end)
+		if !ok {
 			continue
 		}
 		fmt.Println(t.TableReference.TableId)
@@ -94,7 +68,7 @@ func (s *TableService) process(jobInsertProjectID string, tl *bigquery.TableList
 	return jobIDs, nil
 }
 
-func (s *TableService) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, tableID string) (jobID string, rerr error) {
+func (s *Service) Copy(jobInsertProjectID string, srcDataset Dataset, dstDataset Dataset, tableID string) (jobID string, rerr error) {
 	for i := 0; i < 3; i++ {
 		job, err := s.bq.Jobs.Insert(jobInsertProjectID, &bigquery.Job{
 			Configuration: &bigquery.JobConfiguration{

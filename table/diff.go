@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/morikuni/failure"
 	"google.golang.org/api/bigquery/v2"
 )
 
-func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
+func (s *Service) DiffAll(baseDataset Dataset, targetDataset Dataset, search SearchOption) error {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	var tltl []*bigquery.TableListTables
@@ -19,9 +20,18 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 		}
 		tl, err := tlreq.Do()
 		if err != nil {
-			return err
+			return failure.Wrap(err)
 		}
-		tltl = append(tltl, tl.Tables...)
+		for _, t := range tl.Tables {
+			ok, err := search.Is(t.TableReference.TableId)
+			if err != nil {
+				return failure.Wrap(err)
+			}
+			if !ok {
+				continue
+			}
+			tltl = append(tltl, t)
+		}
 
 		fmt.Printf("TotalItems:%d, NextPageToken:%+v\n", len(tl.Tables), tl.NextPageToken)
 		if len(tl.NextPageToken) < 1 {
@@ -53,7 +63,7 @@ func (s *TableService) Diff(baseDataset Dataset, targetDataset Dataset) error {
 	return nil
 }
 
-func (s *TableService) getTable(projectID string, datasetID string, tableID string) (*bigquery.Table, error) {
+func (s *Service) getTable(projectID string, datasetID string, tableID string) (*bigquery.Table, error) {
 	t, err := s.bq.Tables.Get(projectID, datasetID, tableID).Do()
 	if err != nil {
 		return nil, err
@@ -68,7 +78,7 @@ type TableDiff struct {
 	SchemaDiff []string
 }
 
-func (s *TableService) diff(t1 *bigquery.Table, t2 *bigquery.Table) *TableDiff {
+func (s *Service) diff(t1 *bigquery.Table, t2 *bigquery.Table) *TableDiff {
 	td := &TableDiff{
 		TableID: t1.TableReference.TableId,
 	}
@@ -103,7 +113,7 @@ func (s *TableService) diff(t1 *bigquery.Table, t2 *bigquery.Table) *TableDiff {
 	return td
 }
 
-func (s *TableService) tableSchemasToTableSchemaMap(tss []*bigquery.TableFieldSchema) map[string]*bigquery.TableFieldSchema {
+func (s *Service) tableSchemasToTableSchemaMap(tss []*bigquery.TableFieldSchema) map[string]*bigquery.TableFieldSchema {
 	tm := map[string]*bigquery.TableFieldSchema{}
 	for _, ts := range tss {
 		tm[ts.Name] = ts
