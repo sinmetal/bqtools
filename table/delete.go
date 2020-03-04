@@ -11,7 +11,7 @@ import (
 
 // DeleteAll is 指定したDatasetの条件に一致するTableを削除する
 // start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
-func (s *Service) DeleteAll(jobInsertProjectID string, dataset Dataset, search *SearchOption) ([]string, error) {
+func (s *Service) DeleteAll(dataset Dataset, search *SearchOption) ([]string, error) {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
 	jobIDs := []string{}
