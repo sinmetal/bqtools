@@ -22,7 +22,7 @@ func (s *Service) DeleteAll(dataset Dataset, search *SearchOption) error {
 		}
 		tl, err := tlreq.Do()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if err := s.processDelete(tl, search); err != nil {
