@@ -27,7 +27,7 @@ func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstData
 			return nil, err
 		}
 
-		js, err := s.process(jobInsertProjectID, tl, dstDataset, search)
+		js, err := s.processCopy(jobInsertProjectID, tl, dstDataset, search)
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +43,7 @@ func (s *Service) CopyAll(jobInsertProjectID string, srcDataset Dataset, dstData
 	return jobIDs, nil
 }
 
-func (s *Service) process(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, search *SearchOption) ([]string, error) {
+func (s *Service) processCopy(jobInsertProjectID string, tl *bigquery.TableList, dstDataset Dataset, search *SearchOption) ([]string, error) {
 	jobIDs := []string{}
 	for _, t := range tl.Tables {
 		if search != nil {
