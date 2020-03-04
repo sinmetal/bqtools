@@ -11,10 +11,9 @@ import (
 
 // DeleteAll is 指定したDatasetの条件に一致するTableを削除する
 // start, end で指定した範囲に収まってるYYYYMMDDのTableをコピーする。
-func (s *Service) DeleteAll(dataset Dataset, search *SearchOption) ([]string, error) {
+func (s *Service) DeleteAll(dataset Dataset, search *SearchOption) error {
 	const pageTokenNull = "@@NULL_PAGE_TOKEN@@"
 
-	jobIDs := []string{}
 	nextPageToken := pageTokenNull
 	for {
 		tlreq := s.bq.Tables.List(dataset.Project, dataset.DatasetID).MaxResults(400)
@@ -26,11 +25,9 @@ func (s *Service) DeleteAll(dataset Dataset, search *SearchOption) ([]string, er
 			return nil, err
 		}
 
-		js, err := s.processDelete(tl, search)
-		if err != nil {
-			return nil, err
+		if err := s.processDelete(tl, search); err != nil {
+			return err
 		}
-		jobIDs = append(jobIDs, js...)
 
 		fmt.Printf("TotalItems:%d, NextPageToken:%s\n", len(tl.Tables), tl.NextPageToken)
 		if tl.NextPageToken == "" {
@@ -39,16 +36,15 @@ func (s *Service) DeleteAll(dataset Dataset, search *SearchOption) ([]string, er
 		nextPageToken = tl.NextPageToken
 	}
 
-	return jobIDs, nil
+	return nil
 }
 
-func (s *Service) processDelete(tl *bigquery.TableList, search *SearchOption) ([]string, error) {
-	jobIDs := []string{}
+func (s *Service) processDelete(tl *bigquery.TableList, search *SearchOption) error {
 	for _, t := range tl.Tables {
 		if search != nil {
 			ok, err := search.Check(t.TableReference.TableId)
 			if err != nil {
-				return nil, failure.Wrap(err)
+				return failure.Wrap(err)
 			}
 			if !ok {
 				continue
@@ -64,7 +60,7 @@ func (s *Service) processDelete(tl *bigquery.TableList, search *SearchOption) ([
 		time.Sleep(80*time.Millisecond + time.Duration(rand.Intn(100))*time.Millisecond)
 	}
 
-	return jobIDs, nil
+	return nil
 }
 
 func (s *Service) Delete(dataset *Dataset, tableID string) (rerr error) {
