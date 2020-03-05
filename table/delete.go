@@ -51,11 +51,8 @@ func (s *Service) processDelete(tl *bigquery.TableList, search *SearchOption) er
 			}
 		}
 
-		fmt.Println(t.TableReference.TableId)
-
 		if err := s.Delete(&Dataset{t.TableReference.ProjectId, t.TableReference.DatasetId}, t.TableReference.TableId); err != nil {
-			fmt.Printf("%s : failed : %s\n", t.TableReference.TableId, err.Error())
-			continue
+			fmt.Printf("%s : failed : %+v\n", t.TableReference.TableId, err)
 		}
 		time.Sleep(80*time.Millisecond + time.Duration(rand.Intn(100))*time.Millisecond)
 	}
@@ -63,15 +60,20 @@ func (s *Service) processDelete(tl *bigquery.TableList, search *SearchOption) er
 	return nil
 }
 
-func (s *Service) Delete(dataset *Dataset, tableID string) (rerr error) {
+func (s *Service) Delete(dataset *Dataset, tableID string) error {
 	const maxRetryCount = 3
 
-	for i := 0; i < maxRetryCount; i++ {
+	var retry int
+	for {
 		if err := s.bq.Tables.Delete(dataset.Project, dataset.DatasetID, tableID).Do(); err != nil {
-			fmt.Printf("failed Table Delete : err = %+v", err)
-			return err
+			fmt.Printf("failed Table Delete : tableID =%s, retryCount =%d, err = %+v\n", tableID, retry, err)
+			if retry > maxRetryCount {
+				return err
+			}
+			retry++
+			continue
 		}
+		fmt.Printf("success delete table : %s\n", tableID)
+		return nil
 	}
-
-	return
 }
